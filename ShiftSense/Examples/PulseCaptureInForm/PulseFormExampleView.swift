@@ -1,49 +1,43 @@
 //
 //  PulseFormExampleView.swift
-//  SmartSpectraExamples
-//
-//  Copyright (c) 2025 Presage Technologies. All rights reserved.
+//  ShiftSense
 //
 
 import SwiftUI
 
-/// Embeds a SmartSpectra pulse capture step inside a more traditional SwiftUI form workflow.
 struct PulseFormExampleView: View {
   @Environment(\.scenePhase) private var scenePhase
   @State private var latestReading: PulseCaptureReading?
   @State private var isPresentingCapture = false
   @State private var cameraStatus = CameraPermission.status()
   @State private var captureDetent: PresentationDetent = .large
-  // Store the formatted value that backs the read-only form row.
   @State private var pulseFieldValue = ""
 
   var body: some View {
     Form {
       introSection
 
-      Section("Form Entry") {
-        // Display the latest accepted measurement where a user would normally type a value.
-        // Keeping it read-only reinforces that data must come from an SDK-backed capture.
+      Section("Check-In Record") {
         ReadOnlyMeasurementField(
-          title: "Pulse (BPM)",
+          title: "Pulse",
           value: pulseFieldValue,
-          unit: "BPM",
-          placeholder: "Tap Capture Pulse to fill this field"
+          unit: "bpm",
+          placeholder: "Tap Start Check-In to save a pulse reading"
         )
 
-        Text("The measurement populates this read-only field once you accept a confident capture.")
+        Text("The measurement is filled after you save a completed check-in.")
           .font(.footnote)
           .foregroundStyle(.secondary)
           .padding(.top, 4)
       }
 
-      Section("Pulse Measurement") {
+      Section("Quick Check-In") {
         Button {
           captureDetent = .large
           isPresentingCapture = true
         } label: {
           Label {
-            Text("Capture Pulse")
+            Text("Start Check-In")
               .fontWeight(.semibold)
           } icon: {
             Image(systemName: "camera.aperture")
@@ -61,15 +55,15 @@ struct PulseFormExampleView: View {
         .disabled(!isCameraCaptureAvailable)
 
         if cameraStatus == .denied || cameraStatus == .restricted {
-          Text("Enable camera access in Settings to capture pulse data.")
+          Text("Enable camera access in Settings to run a check-in.")
             .font(.footnote)
             .foregroundStyle(.secondary)
         }
       }
 
       if let reading = latestReading {
-        Section("Last Capture") {
-          LabeledContent("Reading") {
+        Section("Last Check-In") {
+          LabeledContent("Pulse") {
             Text(reading.formattedBpm)
           }
           LabeledContent("Collected") {
@@ -79,7 +73,7 @@ struct PulseFormExampleView: View {
         }
       }
     }
-    .navigationTitle("Pulse Capture Form")
+    .navigationTitle("ShiftSense Check-In")
     .navigationBarTitleDisplayMode(.inline)
     .cameraPermissionGate()
     .sheet(isPresented: $isPresentingCapture) {
@@ -95,7 +89,6 @@ struct PulseFormExampleView: View {
       cameraStatus = CameraPermission.status()
     }
     .onChange(of: latestReading, initial: true) { _, reading in
-      // Ensure the synthetic field always mirrors the most recent capture, even after a view refresh.
       pulseFieldValue = reading?.bpmString ?? ""
     }
   }
@@ -105,13 +98,11 @@ private extension PulseFormExampleView {
   var introSection: some View {
     Section {
       VStack(alignment: .leading, spacing: 8) {
-        Text("Capture Pulse Into Your Form")
+        Text("Capture a quick wellness reading")
           .font(.headline)
-        Text(
-          "Launch the SmartSpectra capture flow, confirm a confident pulse reading, and we will drop the result straight into this form entry."
-        )
-        .font(.callout)
-        .foregroundStyle(.secondary)
+        Text("Launch a short contactless check-in and save the pulse reading into this record.")
+          .font(.callout)
+          .foregroundStyle(.secondary)
       }
       .padding(.vertical, 4)
     }
@@ -133,7 +124,6 @@ private struct ReadOnlyMeasurementField: View {
   let unit: String?
   let placeholder: String
 
-  /// Styled container that mimics a text field while ensuring data always comes from the SDK.
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       Text(title)

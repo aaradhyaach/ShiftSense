@@ -1,23 +1,19 @@
 //
 //  SmartSpectraExperienceExampleView.swift
-//  SmartSpectraExamples
-//
-//  Copyright (c) 2025 Presage Technologies. All rights reserved.
+//  ShiftSense
 //
 
 import AVFoundation
 import SmartSpectraSwiftSDK
 import SwiftUI
 
-/// Minimal wrapper that showcases the SDK-provided SmartSpectraView UX.
 struct SmartSpectraExperienceExampleView: View {
   @ObservedObject private var sdk = SmartSpectraSwiftSDK.shared
 
   private enum Config {
-    // These presets demonstrate the out-of-the-box SmartSpectra UX with minimal tweaks.
     static let mode: SmartSpectraMode = .continuous
     static let camera: AVCaptureDevice.Position = .front
-    static let measurementDuration: Double = 30
+    static let measurementDuration: Double = 15
     static let showsBuiltInControls = true
   }
 
@@ -25,7 +21,7 @@ struct SmartSpectraExperienceExampleView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
         introSection
-        smartSpectraCard
+        guidedCheckInCard
         metricsSection
       }
       .padding(24)
@@ -33,7 +29,7 @@ struct SmartSpectraExperienceExampleView: View {
       .frame(maxWidth: .infinity)
     }
     .background(Color(.systemGroupedBackground).ignoresSafeArea())
-    .navigationTitle("SmartSpectra UX")
+    .navigationTitle("ShiftSense Guided Check-In")
     .navigationBarTitleDisplayMode(.inline)
     .cameraPermissionGate()
     .onAppear(perform: configureSdk)
@@ -41,17 +37,16 @@ struct SmartSpectraExperienceExampleView: View {
 
   private var introSection: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Guided Capture Experience")
+      Text("Guided wellness check-in")
         .font(.title2.weight(.semibold))
-      Text(
-        "SmartSpectraView delivers the SDK's fully guided capture flow, handling onboarding, video capture, and result screens for you."
-      )
-      .font(.callout)
-      .foregroundStyle(.secondary)
+
+      Text("This guided flow walks the user through a brief contactless check-in and returns pulse and breathing summaries.")
+        .font(.callout)
+        .foregroundStyle(.secondary)
     }
   }
 
-  private var smartSpectraCard: some View {
+  private var guidedCheckInCard: some View {
     SmartSpectraView()
       .frame(maxWidth: .infinity)
       .frame(minHeight: 420)
@@ -66,15 +61,14 @@ struct SmartSpectraExperienceExampleView: View {
   @ViewBuilder
   private var metricsSection: some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text("Latest Metrics")
+      Text("Latest check-in summary")
         .font(.title3.weight(.semibold))
 
       if let metrics = sdk.metricsBuffer {
-        // The shared SDK caches the latest metrics buffer so we can surface quick summaries.
         if let pulse = metrics.pulse.rate.last {
           let bpm = Int(pulse.value.rounded())
           let confidence = Int(pulse.confidence.rounded())
-          Text("Pulse: \(bpm) BPM (confidence \(confidence))")
+          Text("Pulse: \(bpm) bpm (confidence \(confidence))")
         }
 
         if let breathing = metrics.breathing.rate.last {
@@ -88,11 +82,11 @@ struct SmartSpectraExperienceExampleView: View {
         }
 
         if metrics.pulse.rate.last == nil, metrics.breathing.rate.last == nil {
-          Text("No summary metrics in the latest buffer.")
+          Text("No summary metrics available yet.")
             .foregroundStyle(.secondary)
         }
       } else {
-        Text("Start a capture to view pulse and breathing summaries here.")
+        Text("Start a guided check-in to view pulse and breathing summaries here.")
           .foregroundStyle(.secondary)
       }
     }
@@ -104,8 +98,6 @@ struct SmartSpectraExperienceExampleView: View {
   }
 
   private func configureSdk() {
-    // Configure shared SDK state once when the screen appears. If your app uses API-key based auth,
-    // call `sdk.setApiKey(_:)` earlier in your flow before presenting this view.
     sdk.setSmartSpectraMode(Config.mode)
     sdk.setCameraPosition(Config.camera)
     sdk.setMeasurementDuration(Config.measurementDuration)

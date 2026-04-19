@@ -1,8 +1,6 @@
 //
 //  PulseCaptureView.swift
-//  SmartSpectraExamples
-//
-//  Copyright (c) 2025 Presage Technologies. All rights reserved.
+//  ShiftSense
 //
 
 import AVFoundation
@@ -11,7 +9,6 @@ import SmartSpectraSwiftSDK
 import SwiftUI
 import UIKit
 
-/// Lightweight model the form view uses to store the most recent capture.
 struct PulseCaptureReading: Equatable {
   let bpm: Int
   let capturedAt: Date
@@ -23,7 +20,6 @@ struct PulseCaptureReading: Equatable {
   }
 }
 
-/// Full-screen sheet that guides the user through capturing a pulse measurement.
 struct PulseCaptureView: View {
   @Environment(\.dismiss) private var dismiss
   @StateObject private var model: PulseCaptureSession
@@ -38,21 +34,21 @@ struct PulseCaptureView: View {
   var body: some View {
     NavigationStack {
       ZStack {
-        Color(.systemBackground)
+        Color(.systemGroupedBackground)
           .ignoresSafeArea()
 
-        VStack(spacing: 16) {
+        VStack(spacing: 18) {
           CameraPreview(image: model.previewImage)
             .frame(maxWidth: .infinity)
             .aspectRatio(1, contentMode: .fit)
 
           VStack(spacing: 8) {
             if let averagePulse = model.averageConfidentPulse {
-              Text("Confident Pulse: \(averagePulse) BPM")
+              Text("Pulse estimate: \(averagePulse) BPM")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.green)
             } else if let livePulse = model.livePulse {
-              Text("Stabilizing Pulse: \(livePulse) BPM")
+              Text("Measuring pulse: \(livePulse) BPM")
                 .font(.title3.weight(.semibold))
             }
 
@@ -72,14 +68,14 @@ struct PulseCaptureView: View {
             model.toggleRecording()
           } label: {
             Label(
-              model.isRecording ? "Stop Capture" : "Start Capture",
+              model.isRecording ? "Stop Scan" : "Start Scan",
               systemImage: model.isRecording ? "stop.circle" : "play.circle"
             )
             .font(.headline)
             .labelStyle(.titleAndIcon)
           }
           .buttonStyle(.borderedProminent)
-          .tint(model.isRecording ? .red : .accentColor)
+          .tint(model.isRecording ? .red : .blue)
           .disabled(!model.canToggleRecording)
         }
         .frame(maxWidth: 520)
@@ -94,7 +90,7 @@ struct PulseCaptureView: View {
           }
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button("Use Reading") {
+          Button("Save Check-In") {
             guard let reading = model.commitMeasurement() else { return }
             onComplete(reading)
             dismiss()
@@ -102,16 +98,14 @@ struct PulseCaptureView: View {
           .disabled(!model.canFinalize)
         }
       }
-      .navigationTitle("Capture Pulse")
+      .navigationTitle("Quick Check-In")
       .navigationBarTitleDisplayMode(.inline)
     }
-    // Spin up the SmartSpectra pipelines when presented and shut them down when the sheet closes.
     .onAppear { model.prepareSession() }
     .onDisappear { model.teardown() }
   }
 }
 
-/// Displays the latest frame coming from the SDK while maintaining a square aspect ratio.
 private struct CameraPreview: View {
   let image: UIImage?
 
@@ -130,7 +124,7 @@ private struct CameraPreview: View {
             .frame(width: side, height: side)
             .clipped()
         } else {
-          ProgressView("Preparing camera…")
+          ProgressView("Preparing camera...")
             .padding()
         }
       }
@@ -146,11 +140,10 @@ private struct CameraPreview: View {
   }
 }
 
-/// Small wrapper around the shared SDK singletons that keeps the capture view declarative.
 @MainActor
 private final class PulseCaptureSession: ObservableObject {
   @Published var previewImage: UIImage?
-  @Published var statusMessage = "Ready to capture."
+  @Published var statusMessage = "Ready for check-in."
   @Published var livePulse: Int?
   @Published var isRecording = false
   @Published var errorMessage: String?
@@ -166,11 +159,9 @@ private final class PulseCaptureSession: ObservableObject {
   }
 
   @Published private(set) var measurement: PulseCaptureReading?
-  var statusCode: StatusCode { vitalsProcessor.lastStatusCode }
   var canFinalize: Bool { measurement != nil && !isRecording }
   var canToggleRecording: Bool { isRecording || vitalsProcessor.lastStatusCode == .ok }
 
-  // The SDK exposes shared singletons; we keep references here so the view model can coordinate state.
   private let smartSpectra = SmartSpectraSwiftSDK.shared
   private let vitalsProcessor = SmartSpectraVitalsProcessor.shared
   private var cancellables: Set<AnyCancellable> = []
@@ -182,17 +173,15 @@ private final class PulseCaptureSession: ObservableObject {
     bindStreams()
   }
 
-  /// Configures SmartSpectra for pulse capture and primes the vitals processor.
   func prepareSession() {
     smartSpectra.setSmartSpectraMode(.continuous)
     smartSpectra.setCameraPosition(.front)
     smartSpectra.setImageOutputEnabled(true)
     smartSpectra.resetMetrics()
     vitalsProcessor.startProcessing()
-    statusMessage = "Position the camera in front of the participant."
+    statusMessage = "Position your face in the center of the frame."
   }
 
-  /// Starts or stops recording depending on the current session state.
   func toggleRecording() {
     if isRecording {
       stopRecording()
@@ -202,12 +191,10 @@ private final class PulseCaptureSession: ObservableObject {
     }
   }
 
-  /// Returns the most recent confident reading once capture has stopped.
   func commitMeasurement() -> PulseCaptureReading? {
     measurement
   }
 
-  /// Stops recording, shuts down the processor, and clears shared SmartSpectra state.
   func teardown() {
     stopRecording()
     vitalsProcessor.stopProcessing()
@@ -215,7 +202,6 @@ private final class PulseCaptureSession: ObservableObject {
   }
 
   private func bindStreams() {
-    // Mirror the SDK publishers onto @Published properties that SwiftUI reads.
     vitalsProcessor.$imageOutput
       .receive(on: RunLoop.main)
       .sink { [weak self] image in
@@ -232,7 +218,6 @@ private final class PulseCaptureSession: ObservableObject {
       }
       .sink { [weak self] measurement in
         guard let self else { return }
-        // Show a live pulse rate while we wait for a confident window of data.
         livePulse = Int(measurement.value.rounded())
         if measurement.confidence > 0 {
           insertConfidentReading(measurement)
@@ -246,7 +231,6 @@ private final class PulseCaptureSession: ObservableObject {
         guard let self else { return }
         let trimmed = hint.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
-          // The SDK emits friendly hints ("Move closer", etc.); surface them directly.
           statusMessage = trimmed
         }
       }
@@ -258,7 +242,6 @@ private final class PulseCaptureSession: ObservableObject {
         guard let self else { return }
         isRecording = recording
         if !recording {
-          // When recording stops (manually or automatically) consolidate the buffered data.
           handleRecordingStopped()
         }
       }
@@ -266,35 +249,31 @@ private final class PulseCaptureSession: ObservableObject {
   }
 
   private func insertConfidentReading(_ reading: Presage_Physiology_MeasurementWithConfidence) {
-    // If we have room, just append.
     if confidentReadings.count < maxConfidentReadings {
       confidentReadings.append(reading)
       return
     }
 
-    // Find the index of the lowest-confidence reading currently stored.
     if let minIndex = confidentReadings.enumerated().min(by: { lhs, rhs in
       lhs.element.confidence < rhs.element.confidence
-    })?.offset {
-      // Replace the lowest-confidence reading only if the new one is more confident.
-      if reading.confidence > confidentReadings[minIndex].confidence {
-        confidentReadings[minIndex] = reading
-      }
+    })?.offset,
+      reading.confidence > confidentReadings[minIndex].confidence
+    {
+      confidentReadings[minIndex] = reading
     }
   }
 
   private func startRecording() {
     errorMessage = nil
-    statusMessage = "Initialising capture…"
+    statusMessage = "Initializing scan..."
     smartSpectra.resetMetrics()
 
     livePulse = nil
     measurement = nil
     confidentReadings.removeAll()
     hasActiveSession = true
-    // Kick off SmartSpectra data collection; completion is signalled back via the publishers.
     vitalsProcessor.startRecording()
-    statusMessage = "Hold steady while we capture the pulse."
+    statusMessage = "Hold steady while we measure."
   }
 
   private func stopRecording() {
@@ -306,16 +285,15 @@ private final class PulseCaptureSession: ObservableObject {
     guard hasActiveSession else { return }
     hasActiveSession = false
 
-    // Require at least one confident reading before committing a measurement back to the form.
     guard let bpm = averageConfidentPulse, bpm > 0 else {
       measurement = nil
-      statusMessage = "No confident pulse detected. Try again."
-      errorMessage = "No confident pulse captured during the session."
+      statusMessage = "No confident pulse reading detected. Try again."
+      errorMessage = "No confident pulse was captured during this check-in."
       return
     }
 
     measurement = PulseCaptureReading(bpm: bpm, capturedAt: Date())
-    statusMessage = "Capture complete."
+    statusMessage = "Check-in complete."
     errorMessage = nil
   }
 }
