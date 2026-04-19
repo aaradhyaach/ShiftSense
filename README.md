@@ -1,66 +1,47 @@
-# SmartSpectraSwiftSDK iOS Examples
+# ShiftSense
 
-Sample SwiftUI application showcasing three integration patterns for the [SmartSpectra Swift SDK](https://github.com/Presage-Security/SmartSpectra):
+**Contactless clinician wellness check-ins powered by Presage vitals sensing and Gemini AI.**
 
-- **SmartSpectra Capture Experience** – Launch the SDK's built-in guided capture UX via `SmartSpectraView` with minimal configuration.
-- **Pulse Capture Form** – Trigger a capture flow, validate the returned reading, and drop the result into a read-only form field.
-- **Live Vitals Preview** – Run a lightweight capture loop with start/stop controls and rolling charts for pulse and breathing traces.
+ShiftSense is an iOS app that uses your device's front camera to run 15-second physiologic check-ins during a clinical shift. It translates raw pulse and breathing data into plain-language insights, tracks wellness trends across a shift, and surfaces recovery actions before strain compounds.
+
+## What it does
+
+- **15-second contactless scan** — uses the Presage SmartSpectra SDK to measure pulse rate and breathing rate via front camera, no wearables required
+- **Gemini AI interpretation** — each check-in generates a personalized clinical-style insight via the Gemini 1.5 Flash API, contextualized to shift type and prior strain history
+- **Shift-aware trend tracking** — check-ins are grouped by shift (Day / Evening / Night) and stored persistently, surfacing cumulative strain patterns not visible from a single reading
+- **Adaptive recovery plan** — recovery guidance adjusts based on wellness level (Calm / Elevated / Strained) and escalates if strain repeats across the shift
+- **Sustainability focus** — uses existing device hardware instead of dedicated wearables, reducing cost, e-waste, and procurement burden for healthcare systems
+
+## Prize tracks
+
+- [MLH] Best Use of Presage
+- [MLH] Best Use of Gemini API
+- [Main Track] Sustainability
+
+## Tech stack
+
+- Swift / SwiftUI (iOS 17+)
+- Presage SmartSpectra Swift SDK
+- Google Gemini 1.5 Flash API
+- Swift Charts
+- Combine
 
 ## Requirements
 
-- Xcode 16.0 or later
-- iOS 17 (device deployment target is 17.0)
-- Physical iOS device (camera access is required; the simulator is not supported)
-- SmartSpectra developer account
+- Xcode 16+
+- iOS 17+ physical device (camera required, simulator not supported)
+- Presage developer account — [physiology.presagetech.com](https://physiology.presagetech.com)
+- Google Gemini API key — [aistudio.google.com](https://aistudio.google.com)
 
-## Getting Started
+## Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Presage-Security/SmartSpectraSwiftSDK-Examples.git
-   cd SmartSpectraExamples
-   ```
-2. **Install credentials**
-   - Sign in (or create an account) at [https://physiology.presagetech.com/](https://physiology.presagetech.com/).
-   - Register your app in the portal and download the generated `PresageService-Info.plist` configuration.
-   - In this repo, copy the provided `SmartSpectraExamples/PresageService-Info.example.plist` to `SmartSpectraExamples/PresageService-Info.plist` and replace the placeholder values with the credentials from the portal. (The real plist is ignored by source control so you can keep secrets out of git.)
-3. **Open the project**
-   - Double-click `SmartSpectraExamples.xcodeproj`, or run `xed .` from the repo root.
-   - Select the `SmartSpectraExamples` target and configure your signing team and bundle identifier.
-4. **Build on a device**
-   - Connect your iOS device, select it as the run destination, then build and run. Grant camera access when prompted.
+1. Clone the repo
+2. Copy `ShiftSense/Secrets.example.swift` to `ShiftSense/Secrets.swift` and add your API keys
+3. Copy `ShiftSense/PresageService-Info.example.plist` to `ShiftSense/PresageService-Info.plist` and add your Presage credentials
+4. Open `ShiftSense.xcodeproj` in Xcode
+5. Set your signing team under Signing & Capabilities
+6. Build and run on a physical iOS device
 
-> **Heads up**: If you prefer API-key authentication over the portal configuration, call `SmartSpectraSwiftSDK.shared.setApiKey("YOUR_API_KEY")` early in your app lifecycle (e.g., in `configureSdk()` inside `SmartSpectraExperienceExampleView`).
+## Disclaimer
 
-## What’s Inside Each Demo
-
-- **SmartSpectra Capture Experience**
-  - Minimal configuration via `SmartSpectraExperienceExampleView.Config` (mode, camera, duration, control visibility).
-  - Pulls latest vitals from `SmartSpectraSwiftSDK.shared.metricsBuffer` to show current pulse/breathing readings.
-
-- **Live Vitals Preview**
-  - Spins up `SmartSpectraVitalsProcessor.shared` once on appear, then lets you start/stop recordings without reinitialising the processor.
-  - Uses `VitalsPlotsOverlay` to render pulse and breathing rate traces in real time while the camera feed fills the background.
-  - `VitalsTracePlotView` extends the most recent sample between SDK updates so the charts stay responsive.
-
-- **Pulse Capture Form**
-  - `PulseFormExampleView` owns the read-only field and launches a capture sheet.
-  - `PulseCaptureView` collects data, enforces confidence thresholds, and hands back a `PulseCaptureReading` when users tap **Use Reading**.
-  - `ReadOnlyMeasurementField` gives visual affordance of a text field without allowing manual edits.
-
-## Customization Tips
-
-- Adjust `SmartSpectraExperienceExampleView.Config` to experiment with mode, camera position, or measurement duration.
-- The pulse form example stores the latest reading in `PulseCaptureReading` and formats it for display; you can replace the read-only view with your own form controls.
-- `PulseCaptureSession` wraps `SmartSpectraSwiftSDK.shared` and `SmartSpectraVitalsProcessor.shared`. Extend it if you need to stream additional metrics or surface custom status messages.
-- `LiveVitalsSession` demonstrates how to consume `SmartSpectraVitalsProcessor` and `SmartSpectraSwiftSDK` publishers directly. Tune the `windowSeconds` constant to adjust how much history each chart displays.
-
-## Troubleshooting
-
-- **Camera access denied** – Users must enable camera permissions in Settings; `CameraPermissionGate` surfaces a prompt if access is missing.
-- **No confident pulse captured** – Ensure good lighting and face positioning; the session will return an error label and you can retry the capture.
-- **Build failures fetching packages** – From Xcode, open *File ▸ Packages ▸ Reset Package Caches* and rebuild.
-
-## License
-
-See [LICENSE](LICENSE) for license information (update this section to match your project’s license).
+For wellness and self-awareness only. Not intended for clinical diagnosis or treatment.
