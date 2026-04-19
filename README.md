@@ -12,12 +12,6 @@ ShiftSense is an iOS app that uses your device's front camera to run 15-second p
 - **Adaptive recovery plan** — recovery guidance adjusts based on wellness level (Calm / Elevated / Strained) and escalates if strain repeats across the shift
 - **Sustainability focus** — uses existing device hardware instead of dedicated wearables, reducing cost, e-waste, and procurement burden for healthcare systems
 
-## Prize tracks
-
-- [MLH] Best Use of Presage
-- [MLH] Best Use of Gemini API
-- [Main Track] Sustainability
-
 ## Tech stack
 
 - Swift / SwiftUI (iOS 17+)
